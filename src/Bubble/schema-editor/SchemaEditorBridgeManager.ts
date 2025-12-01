@@ -21,13 +21,24 @@ export interface BubbleHandler {
  * Schema Editor Bridge 单例管理器
  * @description 全局唯一的监听器管理，避免多个 Bubble 组件冲突
  *
+ * @remarks
+ * 推荐使用 `useSchemaEditorBridge` Hook，它会自动管理启用状态和注册/注销流程。
+ * 如需直接使用 Manager，需手动调用 `setEnabled(true)` 启动 Bridge。
+ *
  * @example
  * ```tsx
- * // 在 Bubble 组件中使用
+ * // 推荐方式：使用 useSchemaEditorBridge Hook（自动管理启用状态）
+ * const { content, setContent } = useSchemaEditorBridge(id, initialContent, {
+ *   enabled: true,
+ *   onContentChange: (c) => console.log('Changed:', c)
+ * });
+ *
+ * // 直接使用 Manager（需手动管理启用状态）
  * useEffect(() => {
  *   const manager = SchemaEditorBridgeManager.getInstance();
+ *   manager.setEnabled(true); // 必须：启用 Bridge
  *   manager.register(id, {
- *     getContent: () => content,
+ *     getContent: () => contentRef.current,
  *     setContent: (c) => setContent(c)
  *   });
  *   return () => manager.unregister(id);
