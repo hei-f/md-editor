@@ -1,9 +1,10 @@
-import { memo, MutableRefObject } from 'react';
+import { memo, MutableRefObject, useMemo } from 'react';
 
-import React, { useMemo } from 'react';
+import React from 'react';
 import { AIBubble } from './AIBubble';
-import { UserBubble } from './UserBubble';
+import { useSchemaEditorBridge } from './schema-editor';
 import type { BubbleProps } from './type';
+import { UserBubble } from './UserBubble';
 
 /**
  * Bubble 组件 - 聊天气泡组件（智能分发器）
@@ -28,6 +29,7 @@ import type { BubbleProps } from './type';
  * @param {any[]} [props.deps] - 依赖数组
  * @param {MutableRefObject} [props.bubbleRef] - 气泡引用
  * @param {MessageBubbleData} [props.originData] - 消息数据，包含角色信息
+ * @param {BubbleSchemaEditorConfig} [props.schemaEditorConfig] - Schema Editor 配置
  *
  * @example
  * ```tsx
@@ -42,6 +44,15 @@ import type { BubbleProps } from './type';
  *   originData={{ role: 'assistant', content: '你好！有什么可以帮助你的吗？' }}
  *   avatar={{ avatar: "ai.jpg", title: "AI助手" }}
  * />
+ *
+ * // 启用 Schema Editor
+ * <Bubble
+ *   originData={{ id: 'msg-1', role: 'assistant', originContent: '# Hello' }}
+ *   schemaEditorConfig={{
+ *     enabled: process.env.NODE_ENV === 'development',
+ *     onContentChange: (content) => console.log('Changed:', content)
+ *   }}
+ * />
  * ```
  *
  * @returns {React.ReactElement} 渲染的聊天气泡组件
@@ -52,21 +63,45 @@ export const Bubble: React.FC<
     bubbleRef?: MutableRefObject<any | undefined>;
   }
 > = memo((props) => {
-  // 根据角色自动选择组件
-  const isUserMessage = useMemo(() => {
-    if (props.placement === undefined) {
-      return props.originData?.role === 'user';
-    }
-    return props.placement === 'right';
-  }, [props.placement, props.originData?.role]);
+  const { originData, schemaEditorConfig } = props;
 
-  // 自动设置正确的 placement，确保类型安全
-  const bubbleProps = {
-    ...props,
-    placement:
-      props.placement ||
-      ((isUserMessage ? 'right' : 'left') as 'left' | 'right'),
-  };
+  /** 解构 Schema Editor 配置，enabled 默认 true */
+  const { enabled: isSchemaEditorEnabled = true, ...schemaEditorRest } =
+    schemaEditorConfig || {};
+
+  /** 获取初始内容：优先 originContent，回退到字符串 content */
+  const initialContent =
+    originData?.originContent ||
+    (typeof originData?.content === 'string' ? originData.content : '');
+
+  /** Schema Editor Bridge Hook */
+  const { content: editedContent } = useSchemaEditorBridge(
+    originData?.id,
+    initialContent,
+    { enabled: isSchemaEditorEnabled, ...schemaEditorRest },
+  );
+
+  /** 根据角色自动选择组件 */
+  const isUserMessage =
+    props.placement === undefined
+      ? originData?.role === 'user'
+      : props.placement === 'right';
+
+  /** 构建传递给子组件的 props */
+  const bubbleProps = useMemo(
+    () => ({
+      ...props,
+      placement: props.placement || (isUserMessage ? 'right' : 'left'),
+      originData: originData
+        ? {
+            ...originData,
+            content: isSchemaEditorEnabled ? editedContent : originData.content,
+          }
+        : undefined,
+    }),
+    [props, isUserMessage, originData, isSchemaEditorEnabled, editedContent],
+  );
+
   // 根据角色分发到对应的子组件
   if (isUserMessage) {
     return <UserBubble {...bubbleProps} pure={false} />;
