@@ -333,6 +333,12 @@ export default () => (
 
 <code src="../demos/bubble/bubblelist-performance-demo.tsx"></code>
 
+### Chrome 开发插件集成
+
+演示 Bubble 组件与 Schema Editor Chrome 扩展的集成，支持实时编辑消息内容。
+
+<code src="../demos/bubble/chrome-extension-demo.tsx"></code>
+
 ## 📖 API 参考
 
 ### Bubble 单个气泡组件
@@ -373,6 +379,28 @@ export default () => (
 | onAvatarClick | 头像点击回调   | `() => void`                          | -      |
 | onDoubleClick | 双击回调函数   | `() => void`                          | -      |
 | preMessage    | 前一条消息数据 | `MessageBubbleData \| undefined`      | -      |
+
+#### Schema Editor 配置
+
+用于与 Schema Editor Chrome 扩展集成，支持实时编辑消息内容。
+
+| 属性               | 说明                    | 类型                      | 默认值 |
+| ------------------ | ----------------------- | ------------------------- | ------ |
+| id                 | 消息ID（插件必需）      | `string`                  | -      |
+| schemaEditorConfig | Schema Editor 集成配置  | `BubbleSchemaEditorConfig` | -      |
+
+**BubbleSchemaEditorConfig 类型定义：**
+
+```typescript
+interface BubbleSchemaEditorConfig {
+  /** 是否启用 Schema Editor 集成，默认 true */
+  enabled?: boolean;
+  /** 内容变化时的回调，当插件编辑内容后触发 */
+  onContentChange?: (content: string) => void;
+  /** 自定义预览渲染，如不提供则使用内置 Markdown 预览 */
+  renderPreview?: (schema: SchemaValue, containerId: string) => (() => void) | void;
+}
+```
 
 ### BubbleList 消息列表组件
 
