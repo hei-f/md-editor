@@ -74,9 +74,9 @@ export const Bubble: React.FC<
     originData?.originContent ||
     (typeof originData?.content === 'string' ? originData.content : '');
 
-  /** Schema Editor Bridge Hook */
+  /** Schema Editor Bridge Hook - 使用 props.id，与 DOM data-id 保持一致 */
   const { content: editedContent } = useSchemaEditorBridge(
-    originData?.id,
+    props.id,
     initialContent,
     { enabled: isSchemaEditorEnabled, ...schemaEditorRest },
   );
