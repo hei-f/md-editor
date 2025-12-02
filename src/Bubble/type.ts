@@ -455,8 +455,8 @@ export interface BubbleProps<T = Record<string, any>>
 export interface BubbleSchemaEditorConfig {
   /**
    * 是否启用 Schema Editor 集成
-   * @description 默认启用，生产环境建议显式设为 false
-   * @default true
+   * @description 默认禁用，需用户主动启用
+   * @default false
    */
   enabled?: boolean;
 

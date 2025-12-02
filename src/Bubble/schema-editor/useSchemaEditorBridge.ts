@@ -68,7 +68,7 @@ export function useSchemaEditorBridge(
   initialContent: string,
   config?: UseSchemaEditorBridgeConfig,
 ): UseSchemaEditorBridgeResult {
-  const { enabled = true, onContentChange, renderPreview } = config || {};
+  const { enabled = false, onContentChange, renderPreview } = config || {};
 
   /**
    * 内部状态：使用 useRefState 同时维护 state 和 ref

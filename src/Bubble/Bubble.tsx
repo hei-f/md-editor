@@ -65,8 +65,8 @@ export const Bubble: React.FC<
 > = memo((props) => {
   const { originData, schemaEditorConfig } = props;
 
-  /** 解构 Schema Editor 配置，enabled 默认 true */
-  const { enabled: isSchemaEditorEnabled = true, ...schemaEditorRest } =
+  /** 解构 Schema Editor 配置，enabled 默认 false（开源项目需用户主动启用） */
+  const { enabled: isSchemaEditorEnabled = false, ...schemaEditorRest } =
     schemaEditorConfig || {};
 
   /** 获取初始内容：优先 originContent，回退到字符串 content */

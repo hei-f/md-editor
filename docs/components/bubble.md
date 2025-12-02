@@ -393,7 +393,7 @@ export default () => (
 
 ```typescript
 interface BubbleSchemaEditorConfig {
-  /** 是否启用 Schema Editor 集成，默认 true */
+  /** 是否启用 Schema Editor 集成，默认 false */
   enabled?: boolean;
   /** 内容变化时的回调，当插件编辑内容后触发 */
   onContentChange?: (content: string) => void;
