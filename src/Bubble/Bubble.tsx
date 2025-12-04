@@ -1,4 +1,4 @@
-import { memo, MutableRefObject, useMemo } from 'react';
+import { memo, MutableRefObject } from 'react';
 
 import React from 'react';
 import { AIBubble } from './AIBubble';
@@ -61,10 +61,15 @@ export const Bubble: React.FC<
 > = memo((props) => {
   const { originData } = props;
 
+  /** 判断是否有可编辑的字符串内容 */
+  const hasEditableContent =
+    !!originData?.originContent || typeof originData?.content === 'string';
+
   /** 获取初始内容：优先 originContent，回退到字符串 content */
-  const initialContent =
-    originData?.originContent ||
-    (typeof originData?.content === 'string' ? originData.content : '');
+  const initialContent = hasEditableContent
+    ? originData?.originContent ||
+      (originData?.content as string)
+    : '';
 
   /**
    * Schema Editor Bridge Hook
@@ -79,16 +84,13 @@ export const Bubble: React.FC<
       : props.placement === 'right';
 
   /** 构建传递给子组件的 props */
-  const bubbleProps = useMemo(
-    () => ({
-      ...props,
-      placement: props.placement || (isUserMessage ? 'right' : 'left'),
-      originData: originData
-        ? { ...originData, content }
-        : undefined,
-    }),
-    [props, isUserMessage, content],
-  );
+  const bubbleProps = {
+    ...props,
+    placement: props.placement || (isUserMessage ? 'right' : 'left'),
+    originData: originData
+      ? { ...originData, ...(hasEditableContent && { content }) }
+      : undefined,
+  };
 
   // 根据角色分发到对应的子组件
   if (isUserMessage) {
