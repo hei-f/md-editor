@@ -3,6 +3,7 @@ import {
   SchemaEditorBridgeManager,
   BubbleHandler,
 } from '../../../src/Bubble/schema-editor/SchemaEditorBridgeManager';
+import { createSchemaEditorBridge } from '@schema-editor/host-sdk/core';
 
 /** Mock @schema-editor/host-sdk */
 vi.mock('@schema-editor/host-sdk/core', () => ({
@@ -267,6 +268,335 @@ describe('SchemaEditorBridgeManager', () => {
       });
 
       expect(manager.has('test-id')).toBe(true);
+    });
+  });
+
+  describe('Bridge 回调函数', () => {
+    /**
+     * 辅助函数：从 mock 调用中获取 bridge 配置
+     */
+    const getBridgeConfig = () => {
+      const mockCalls = vi.mocked(createSchemaEditorBridge).mock.calls;
+      if (mockCalls.length === 0) return null;
+      return mockCalls[mockCalls.length - 1][0] as {
+        getSchema?: (params: string) => any;
+        updateSchema?: (schema: any, params: string) => boolean;
+        renderPreview?: (schema: any, containerId: string) => (() => void) | void;
+      };
+    };
+
+    describe('getSchema 回调', () => {
+      it('应该返回已注册 handler 的内容', () => {
+        const manager = SchemaEditorBridgeManager.getInstance();
+        manager.setEnabled(true);
+        manager.register('test-id', {
+          getContent: () => 'test content',
+          setContent: vi.fn(),
+        });
+
+        const config = getBridgeConfig();
+        expect(config).not.toBeNull();
+        const result = config?.getSchema?.('test-id');
+        expect(result).toBe('test content');
+      });
+
+      it('应该返回 undefined 当 handler 不存在时', () => {
+        const manager = SchemaEditorBridgeManager.getInstance();
+        manager.setEnabled(true);
+        manager.register('test-id', {
+          getContent: () => 'content',
+          setContent: vi.fn(),
+        });
+
+        const config = getBridgeConfig();
+        expect(config).not.toBeNull();
+        const result = config?.getSchema?.('non-existent-id');
+        expect(result).toBeUndefined();
+      });
+    });
+
+    describe('updateSchema 回调', () => {
+      it('应该正确更新字符串类型的 schema', () => {
+        const setContentMock = vi.fn();
+        const manager = SchemaEditorBridgeManager.getInstance();
+        manager.setEnabled(true);
+        manager.register('test-id', {
+          getContent: () => 'old content',
+          setContent: setContentMock,
+        });
+
+        const config = getBridgeConfig();
+        expect(config).not.toBeNull();
+        const result = config?.updateSchema?.('new content', 'test-id');
+        expect(result).toBe(true);
+        expect(setContentMock).toHaveBeenCalledWith('new content');
+      });
+
+      it('应该正确更新对象类型的 schema', () => {
+        const setContentMock = vi.fn();
+        const manager = SchemaEditorBridgeManager.getInstance();
+        manager.setEnabled(true);
+        manager.register('test-id', {
+          getContent: () => 'old content',
+          setContent: setContentMock,
+        });
+
+        const config = getBridgeConfig();
+        expect(config).not.toBeNull();
+        const schemaObject = { key: 'value', nested: { data: 123 } };
+        const result = config?.updateSchema?.(schemaObject, 'test-id');
+        expect(result).toBe(true);
+        expect(setContentMock).toHaveBeenCalledWith(
+          JSON.stringify(schemaObject, null, 2),
+        );
+      });
+
+      it('应该返回 false 当 handler 不存在时', () => {
+        const manager = SchemaEditorBridgeManager.getInstance();
+        manager.setEnabled(true);
+        manager.register('test-id', {
+          getContent: () => 'content',
+          setContent: vi.fn(),
+        });
+
+        const config = getBridgeConfig();
+        expect(config).not.toBeNull();
+        const result = config?.updateSchema?.(
+          'new content',
+          'non-existent-id',
+        );
+        expect(result).toBe(false);
+      });
+
+      it('应该捕获错误并返回 false', () => {
+        const consoleSpy = vi
+          .spyOn(console, 'error')
+          .mockImplementation(() => {});
+        const setContentMock = vi.fn().mockImplementation(() => {
+          throw new Error('Test error');
+        });
+        const manager = SchemaEditorBridgeManager.getInstance();
+        manager.setEnabled(true);
+        manager.register('test-id', {
+          getContent: () => 'old content',
+          setContent: setContentMock,
+        });
+
+        const config = getBridgeConfig();
+        expect(config).not.toBeNull();
+        const result = config?.updateSchema?.('new content', 'test-id');
+        expect(result).toBe(false);
+        expect(consoleSpy).toHaveBeenCalled();
+        consoleSpy.mockRestore();
+      });
+    });
+
+    describe('renderPreview 回调', () => {
+      it('应该调用自定义 renderPreview 当存在时', () => {
+        const customRenderPreview = vi.fn().mockReturnValue(() => {});
+        const manager = SchemaEditorBridgeManager.getInstance();
+        manager.setEnabled(true);
+        manager.register('test-id', {
+          getContent: () => 'content',
+          setContent: vi.fn(),
+          renderPreview: customRenderPreview,
+        });
+
+        const config = getBridgeConfig();
+        /** 先调用 getSchema 设置 currentEditingId */
+        config?.getSchema?.('test-id');
+
+        expect(config).not.toBeNull();
+        config?.renderPreview?.('schema content', 'container-id');
+        expect(customRenderPreview).toHaveBeenCalledWith(
+          'schema content',
+          'container-id',
+        );
+      });
+
+      it('应该使用默认预览当没有自定义 renderPreview 时', () => {
+        /** 创建 mock DOM 容器 */
+        const container = document.createElement('div');
+        container.id = 'preview-container';
+        document.body.appendChild(container);
+
+        const manager = SchemaEditorBridgeManager.getInstance();
+        manager.setEnabled(true);
+        manager.register('test-id', {
+          getContent: () => 'content',
+          setContent: vi.fn(),
+          /** 没有 renderPreview */
+        });
+
+        const config = getBridgeConfig();
+        /** 先调用 getSchema 设置 currentEditingId */
+        config?.getSchema?.('test-id');
+
+        expect(config).not.toBeNull();
+        const cleanup = config?.renderPreview?.(
+          '# Test Markdown',
+          'preview-container',
+        );
+        expect(typeof cleanup).toBe('function');
+
+        /** 清理 */
+        if (typeof cleanup === 'function') {
+          cleanup();
+        }
+        document.body.removeChild(container);
+      });
+
+      it('默认预览当容器不存在时应该返回 undefined', () => {
+        const manager = SchemaEditorBridgeManager.getInstance();
+        manager.setEnabled(true);
+        manager.register('test-id', {
+          getContent: () => 'content',
+          setContent: vi.fn(),
+        });
+
+        const config = getBridgeConfig();
+        /** 先调用 getSchema 设置 currentEditingId */
+        config?.getSchema?.('test-id');
+
+        expect(config).not.toBeNull();
+        const result = config?.renderPreview?.(
+          '# Test',
+          'non-existent-container',
+        );
+        expect(result).toBeUndefined();
+      });
+
+      it('默认预览应该处理对象类型的 schema', () => {
+        const container = document.createElement('div');
+        container.id = 'preview-container-obj';
+        document.body.appendChild(container);
+
+        const manager = SchemaEditorBridgeManager.getInstance();
+        manager.setEnabled(true);
+        manager.register('test-id', {
+          getContent: () => 'content',
+          setContent: vi.fn(),
+        });
+
+        const config = getBridgeConfig();
+        /** 先调用 getSchema 设置 currentEditingId */
+        config?.getSchema?.('test-id');
+
+        const schemaObject = { type: 'test', data: [1, 2, 3] };
+        const cleanup = config?.renderPreview?.(
+          schemaObject,
+          'preview-container-obj',
+        );
+        expect(typeof cleanup).toBe('function');
+
+        if (typeof cleanup === 'function') {
+          cleanup();
+        }
+        document.body.removeChild(container);
+      });
+    });
+  });
+
+  describe('setEnabled 边界情况', () => {
+    it('从启用切换到禁用应该停止 bridge', async () => {
+      const mockCleanup = vi.fn();
+      const { createSchemaEditorBridge } = await import(
+        '@schema-editor/host-sdk/core'
+      );
+      vi.mocked(createSchemaEditorBridge).mockReturnValue(mockCleanup);
+
+      const manager = SchemaEditorBridgeManager.getInstance();
+
+      /** 先启用并注册 */
+      manager.setEnabled(true);
+      manager.register('test-id', {
+        getContent: () => 'content',
+        setContent: vi.fn(),
+      });
+
+      /** 然后禁用 */
+      manager.setEnabled(false);
+      expect(mockCleanup).toHaveBeenCalled();
+    });
+
+    it('重复启用不应该重复创建 bridge', async () => {
+      const { createSchemaEditorBridge } = await import(
+        '@schema-editor/host-sdk/core'
+      );
+      vi.mocked(createSchemaEditorBridge).mockClear();
+
+      const manager = SchemaEditorBridgeManager.getInstance();
+
+      manager.setEnabled(true);
+      manager.register('test-id', {
+        getContent: () => 'content',
+        setContent: vi.fn(),
+      });
+
+      const callCountAfterFirst = vi.mocked(createSchemaEditorBridge).mock.calls
+        .length;
+
+      /** 再次启用 */
+      manager.setEnabled(true);
+
+      /** 不应该再次创建 bridge */
+      expect(vi.mocked(createSchemaEditorBridge).mock.calls.length).toBe(
+        callCountAfterFirst,
+      );
+    });
+
+    it('启用时如果没有注册的 handler 不应该启动 bridge', async () => {
+      const { createSchemaEditorBridge } = await import(
+        '@schema-editor/host-sdk/core'
+      );
+      vi.mocked(createSchemaEditorBridge).mockClear();
+
+      const manager = SchemaEditorBridgeManager.getInstance();
+
+      /** 启用但没有注册任何 handler */
+      manager.setEnabled(true);
+
+      expect(createSchemaEditorBridge).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('destroy 清理 previewRoot', () => {
+    /**
+     * 辅助函数：从 mock 调用中获取 bridge 配置
+     */
+    const getBridgeConfig = () => {
+      const mockCalls = vi.mocked(createSchemaEditorBridge).mock.calls;
+      if (mockCalls.length === 0) return null;
+      return mockCalls[mockCalls.length - 1][0] as {
+        getSchema?: (params: string) => any;
+        updateSchema?: (schema: any, params: string) => boolean;
+        renderPreview?: (schema: any, containerId: string) => (() => void) | void;
+      };
+    };
+
+    it('destroy 应该清理 previewRoot', () => {
+      const container = document.createElement('div');
+      container.id = 'preview-container-destroy';
+      document.body.appendChild(container);
+
+      const manager = SchemaEditorBridgeManager.getInstance();
+      manager.setEnabled(true);
+      manager.register('test-id', {
+        getContent: () => 'content',
+        setContent: vi.fn(),
+      });
+
+      const config = getBridgeConfig();
+      /** 触发创建 previewRoot */
+      config?.getSchema?.('test-id');
+      config?.renderPreview?.('# Test', 'preview-container-destroy');
+
+      /** 销毁应该不抛出错误 */
+      expect(() => {
+        SchemaEditorBridgeManager.destroy();
+      }).not.toThrow();
+
+      document.body.removeChild(container);
     });
   });
 });

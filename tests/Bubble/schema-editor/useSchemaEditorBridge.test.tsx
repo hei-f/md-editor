@@ -104,6 +104,25 @@ describe('useSchemaEditorBridge', () => {
       const manager = SchemaEditorBridgeManager.getInstance();
       expect(manager.has('test-id')).toBe(false);
     });
+
+    it('生产环境应该注销已注册的 handler', () => {
+      /** 模拟：先在开发环境注册 handler */
+      const manager = SchemaEditorBridgeManager.getInstance();
+      manager.setEnabled(true);
+      manager.register('test-id', {
+        getContent: () => 'content',
+        setContent: () => {},
+      });
+      expect(manager.has('test-id')).toBe(true);
+
+      /** 切换到生产环境并执行 hook */
+      process.env.NODE_ENV = 'production';
+
+      renderHook(() => useSchemaEditorBridge('test-id', 'content'));
+
+      /** 应该注销已存在的 handler */
+      expect(manager.has('test-id')).toBe(false);
+    });
   });
 
   describe('id 处理', () => {
@@ -201,6 +220,10 @@ describe('useSchemaEditorBridge', () => {
       expect(manager.has('id-1')).toBe(false);
       expect(manager.has('id-2')).toBe(true);
       expect(manager.getRegistrySize()).toBe(1);
+
+      // 清理 hook2
+      hook2.unmount();
+      expect(manager.getRegistrySize()).toBe(0);
     });
   });
 
