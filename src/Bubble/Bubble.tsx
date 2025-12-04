@@ -29,8 +29,6 @@ import { UserBubble } from './UserBubble';
  * @param {any[]} [props.deps] - 依赖数组
  * @param {MutableRefObject} [props.bubbleRef] - 气泡引用
  * @param {MessageBubbleData} [props.originData] - 消息数据，包含角色信息
- * @param {BubbleSchemaEditorConfig} [props.schemaEditorConfig] - Schema Editor 配置
- *
  * @example
  * ```tsx
  * // 用户消息会自动使用 UserBubble
@@ -45,13 +43,11 @@ import { UserBubble } from './UserBubble';
  *   avatar={{ avatar: "ai.jpg", title: "AI助手" }}
  * />
  *
- * // 启用 Schema Editor
+ * // Schema Editor 在开发环境下自动启用
+ * // 需要传入 id 以支持插件识别
  * <Bubble
+ *   id="msg-1"
  *   originData={{ id: 'msg-1', role: 'assistant', originContent: '# Hello' }}
- *   schemaEditorConfig={{
- *     enabled: process.env.NODE_ENV === 'development',
- *     onContentChange: (content) => console.log('Changed:', content)
- *   }}
  * />
  * ```
  *
@@ -63,23 +59,18 @@ export const Bubble: React.FC<
     bubbleRef?: MutableRefObject<any | undefined>;
   }
 > = memo((props) => {
-  const { originData, schemaEditorConfig } = props;
-
-  /** 解构 Schema Editor 配置，enabled 默认 false（开源项目需用户主动启用） */
-  const { enabled: isSchemaEditorEnabled = false, ...schemaEditorRest } =
-    schemaEditorConfig || {};
+  const { originData } = props;
 
   /** 获取初始内容：优先 originContent，回退到字符串 content */
   const initialContent =
     originData?.originContent ||
     (typeof originData?.content === 'string' ? originData.content : '');
 
-  /** Schema Editor Bridge Hook - 使用 props.id，与 DOM data-id 保持一致 */
-  const { content: editedContent } = useSchemaEditorBridge(
-    props.id,
-    initialContent,
-    { enabled: isSchemaEditorEnabled, ...schemaEditorRest },
-  );
+  /**
+   * Schema Editor Bridge Hook
+   * @description 开发环境自动启用，生产环境返回原始内容
+   */
+  const { content } = useSchemaEditorBridge(props.id, initialContent);
 
   /** 根据角色自动选择组件 */
   const isUserMessage =
@@ -93,13 +84,10 @@ export const Bubble: React.FC<
       ...props,
       placement: props.placement || (isUserMessage ? 'right' : 'left'),
       originData: originData
-        ? {
-            ...originData,
-            content: isSchemaEditorEnabled ? editedContent : originData.content,
-          }
+        ? { ...originData, content }
         : undefined,
     }),
-    [props, isUserMessage, isSchemaEditorEnabled, editedContent],
+    [props, isUserMessage, content],
   );
 
   // 根据角色分发到对应的子组件

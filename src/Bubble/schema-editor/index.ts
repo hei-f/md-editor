@@ -10,7 +10,6 @@ export {
 
 export {
   useSchemaEditorBridge,
-  type UseSchemaEditorBridgeConfig,
   type UseSchemaEditorBridgeResult,
 } from './useSchemaEditorBridge';
 

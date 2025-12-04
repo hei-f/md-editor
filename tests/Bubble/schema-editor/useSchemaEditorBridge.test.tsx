@@ -1,9 +1,6 @@
 import { renderHook, act } from '@testing-library/react';
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import {
-  useSchemaEditorBridge,
-  UseSchemaEditorBridgeConfig,
-} from '../../../src/Bubble/schema-editor/useSchemaEditorBridge';
+import { useSchemaEditorBridge } from '../../../src/Bubble/schema-editor/useSchemaEditorBridge';
 import { SchemaEditorBridgeManager } from '../../../src/Bubble/schema-editor/SchemaEditorBridgeManager';
 
 /** Mock @schema-editor/host-sdk */
@@ -11,12 +8,10 @@ vi.mock('@schema-editor/host-sdk/core', () => ({
   createSchemaEditorBridge: vi.fn(() => vi.fn()),
 }));
 
-/** Mock react-use */
-vi.mock('react-use', () => ({
-  useLatest: <T,>(value: T) => ({ current: value }),
-}));
-
 describe('useSchemaEditorBridge', () => {
+  /** 保存原始 NODE_ENV */
+  const originalNodeEnv = process.env.NODE_ENV;
+
   beforeEach(() => {
     SchemaEditorBridgeManager.destroy();
   });
@@ -24,6 +19,8 @@ describe('useSchemaEditorBridge', () => {
   afterEach(() => {
     SchemaEditorBridgeManager.destroy();
     vi.clearAllMocks();
+    /** 恢复 NODE_ENV */
+    process.env.NODE_ENV = originalNodeEnv;
   });
 
   describe('初始化', () => {
@@ -63,84 +60,56 @@ describe('useSchemaEditorBridge', () => {
       expect(result.current.content).toBe('updated');
     });
 
-    it('应该触发 onContentChange 回调', () => {
-      const onContentChange = vi.fn();
-      const config: UseSchemaEditorBridgeConfig = { onContentChange };
-
-      const { result } = renderHook(() =>
-        useSchemaEditorBridge('test-id', 'initial', config),
-      );
-
-      act(() => {
-        result.current.setContent('updated');
-      });
-
-      expect(onContentChange).toHaveBeenCalledWith('updated');
-    });
-
-    it('没有 onContentChange 时不应该抛出错误', () => {
+    it('多次更新应该正常工作', () => {
       const { result } = renderHook(() =>
         useSchemaEditorBridge('test-id', 'initial'),
       );
 
-      expect(() => {
-        act(() => {
-          result.current.setContent('updated');
-        });
-      }).not.toThrow();
+      act(() => {
+        result.current.setContent('first update');
+      });
+      expect(result.current.content).toBe('first update');
+
+      act(() => {
+        result.current.setContent('second update');
+      });
+      expect(result.current.content).toBe('second update');
     });
   });
 
-  describe('enabled 配置', () => {
-    it('默认应该启用（enabled = true）', () => {
+  describe('开发环境启用', () => {
+    it('开发环境应该注册到管理器', () => {
+      process.env.NODE_ENV = 'development';
+
       renderHook(() => useSchemaEditorBridge('test-id', 'content'));
 
       const manager = SchemaEditorBridgeManager.getInstance();
       expect(manager.has('test-id')).toBe(true);
     });
 
-    it('enabled = false 时不应该注册到管理器', () => {
-      renderHook(() =>
-        useSchemaEditorBridge('test-id', 'content', { enabled: false }),
-      );
+    it('生产环境不应该注册到管理器', () => {
+      process.env.NODE_ENV = 'production';
+
+      renderHook(() => useSchemaEditorBridge('test-id', 'content'));
 
       const manager = SchemaEditorBridgeManager.getInstance();
       expect(manager.has('test-id')).toBe(false);
     });
 
-    it('enabled 从 true 变为 false 时应该注销', () => {
-      const { rerender } = renderHook(
-        ({ enabled }: { enabled: boolean }) =>
-          useSchemaEditorBridge('test-id', 'content', { enabled }),
-        { initialProps: { enabled: true } },
-      );
+    it('测试环境不应该注册到管理器', () => {
+      process.env.NODE_ENV = 'test';
 
-      const manager = SchemaEditorBridgeManager.getInstance();
-      expect(manager.has('test-id')).toBe(true);
-
-      rerender({ enabled: false });
-
-      expect(manager.has('test-id')).toBe(false);
-    });
-
-    it('enabled 从 false 变为 true 时应该注册', () => {
-      const { rerender } = renderHook(
-        ({ enabled }: { enabled: boolean }) =>
-          useSchemaEditorBridge('test-id', 'content', { enabled }),
-        { initialProps: { enabled: false } },
-      );
+      renderHook(() => useSchemaEditorBridge('test-id', 'content'));
 
       const manager = SchemaEditorBridgeManager.getInstance();
       expect(manager.has('test-id')).toBe(false);
-
-      rerender({ enabled: true });
-
-      expect(manager.has('test-id')).toBe(true);
     });
   });
 
   describe('id 处理', () => {
     it('id 为 undefined 时不应该注册', () => {
+      process.env.NODE_ENV = 'development';
+
       renderHook(() => useSchemaEditorBridge(undefined, 'content'));
 
       const manager = SchemaEditorBridgeManager.getInstance();
@@ -148,6 +117,8 @@ describe('useSchemaEditorBridge', () => {
     });
 
     it('id 变化时应该重新注册', () => {
+      process.env.NODE_ENV = 'development';
+
       const { rerender } = renderHook(
         ({ id }: { id: string }) => useSchemaEditorBridge(id, 'content'),
         { initialProps: { id: 'id-1' } },
@@ -182,6 +153,8 @@ describe('useSchemaEditorBridge', () => {
 
   describe('组件卸载', () => {
     it('卸载时应该注销 handler', () => {
+      process.env.NODE_ENV = 'development';
+
       const { unmount } = renderHook(() =>
         useSchemaEditorBridge('test-id', 'content'),
       );
@@ -197,6 +170,8 @@ describe('useSchemaEditorBridge', () => {
 
   describe('多个 Hook 实例', () => {
     it('多个实例应该各自独立注册', () => {
+      process.env.NODE_ENV = 'development';
+
       renderHook(() => useSchemaEditorBridge('id-1', 'content 1'));
       renderHook(() => useSchemaEditorBridge('id-2', 'content 2'));
       renderHook(() => useSchemaEditorBridge('id-3', 'content 3'));
@@ -209,8 +184,14 @@ describe('useSchemaEditorBridge', () => {
     });
 
     it('部分实例卸载不应该影响其他实例', () => {
-      const hook1 = renderHook(() => useSchemaEditorBridge('id-1', 'content 1'));
-      const hook2 = renderHook(() => useSchemaEditorBridge('id-2', 'content 2'));
+      process.env.NODE_ENV = 'development';
+
+      const hook1 = renderHook(() =>
+        useSchemaEditorBridge('id-1', 'content 1'),
+      );
+      const hook2 = renderHook(() =>
+        useSchemaEditorBridge('id-2', 'content 2'),
+      );
 
       const manager = SchemaEditorBridgeManager.getInstance();
       expect(manager.getRegistrySize()).toBe(2);
@@ -223,45 +204,10 @@ describe('useSchemaEditorBridge', () => {
     });
   });
 
-  describe('renderPreview 配置', () => {
-    it('应该将 renderPreview 传递给管理器', () => {
-      const customRenderPreview = vi.fn();
-
-      renderHook(() =>
-        useSchemaEditorBridge('test-id', 'content', {
-          renderPreview: customRenderPreview,
-        }),
-      );
-
-      const manager = SchemaEditorBridgeManager.getInstance();
-      expect(manager.has('test-id')).toBe(true);
-    });
-  });
-
   describe('边界情况', () => {
-    it('config 为 undefined 时应该使用默认值', () => {
-      const { result } = renderHook(() =>
-        useSchemaEditorBridge('test-id', 'content', undefined),
-      );
-
-      expect(result.current.content).toBe('content');
-
-      const manager = SchemaEditorBridgeManager.getInstance();
-      expect(manager.has('test-id')).toBe(true);
-    });
-
-    it('空对象 config 应该使用默认值', () => {
-      const { result } = renderHook(() =>
-        useSchemaEditorBridge('test-id', 'content', {}),
-      );
-
-      expect(result.current.content).toBe('content');
-
-      const manager = SchemaEditorBridgeManager.getInstance();
-      expect(manager.has('test-id')).toBe(true);
-    });
-
     it('特殊字符 id 应该正常工作', () => {
+      process.env.NODE_ENV = 'development';
+
       const specialIds = [
         'id-with-dash',
         'id_with_underscore',
@@ -284,4 +230,3 @@ describe('useSchemaEditorBridge', () => {
     });
   });
 });
-

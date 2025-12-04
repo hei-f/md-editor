@@ -23,15 +23,13 @@ export interface BubbleHandler {
  *
  * @remarks
  * 推荐使用 `useSchemaEditorBridge` Hook，它会自动管理启用状态和注册/注销流程。
+ * Schema Editor 在开发环境下自动启用（process.env.NODE_ENV === 'development'）。
  * 如需直接使用 Manager，需手动调用 `setEnabled(true)` 启动 Bridge。
  *
  * @example
  * ```tsx
- * // 推荐方式：使用 useSchemaEditorBridge Hook（自动管理启用状态）
- * const { content, setContent } = useSchemaEditorBridge(id, initialContent, {
- *   enabled: true,
- *   onContentChange: (c) => console.log('Changed:', c)
- * });
+ * // 推荐方式：使用 useSchemaEditorBridge Hook（开发环境自动启用）
+ * const { content, setContent } = useSchemaEditorBridge(id, initialContent);
  *
  * // 直接使用 Manager（需手动管理启用状态）
  * useEffect(() => {
