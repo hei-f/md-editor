@@ -7,3 +7,9 @@ node_modules
 /docs-dist
 tsconfig.tsbuildinfo
 coverage/**
+.idea/.gitignore
+.idea/md-editor.iml
+.idea/modules.xml
+.idea/prettier.xml
+.idea/vcs.xml
+.idea/inspectionProfiles/Project_Default.xml

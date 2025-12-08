@@ -1,4 +1,4 @@
-import { memo, MutableRefObject } from 'react';
+import { memo, MutableRefObject, useMemo } from 'react';
 
 import React from 'react';
 import { AIBubble } from './AIBubble';
@@ -60,36 +60,34 @@ export const Bubble: React.FC<
   }
 > = memo((props) => {
   const { originData } = props;
+  const isStringContent = typeof originData?.content === 'string';
 
-  /** 判断是否有可编辑的字符串内容 */
-  const hasEditableContent =
-    !!originData?.originContent || typeof originData?.content === 'string';
+  /** Schema Editor Bridge - 开发环境自动启用 */
+  const { content } = useSchemaEditorBridge(
+    props.id,
+    isStringContent ? (originData.content as string) : '',
+  );
 
-  /** 获取初始内容：优先 originContent，回退到字符串 content */
-  const initialContent = hasEditableContent
-    ? originData?.originContent ||
-      (originData?.content as string)
-    : '';
+   /** 根据角色自动选择组件 */
+   const isUserMessage =
+   props.placement === undefined
+     ? originData?.role === 'user'
+     : props.placement === 'right';
 
-  /**
-   * Schema Editor Bridge Hook
-   * @description 开发环境自动启用，生产环境返回原始内容
-   */
-  const { content } = useSchemaEditorBridge(props.id, initialContent);
-
-  /** 根据角色自动选择组件 */
-  const isUserMessage =
-    props.placement === undefined
-      ? originData?.role === 'user'
-      : props.placement === 'right';
+  /** 稳定 originData 引用 */
+  const memoizedOriginData = useMemo(
+    () =>
+      originData
+        ? { ...originData, ...(isStringContent && { content }) }
+        : undefined,
+    [originData, isStringContent, content],
+  );
 
   /** 构建传递给子组件的 props */
   const bubbleProps = {
     ...props,
     placement: props.placement || (isUserMessage ? 'right' : 'left'),
-    originData: originData
-      ? { ...originData, ...(hasEditableContent && { content }) }
-      : undefined,
+    originData: memoizedOriginData,
   };
 
   // 根据角色分发到对应的子组件

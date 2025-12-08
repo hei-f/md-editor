@@ -31,5 +31,25 @@
     "CHANGELOG.md": true,
     "**/pnpm-lock.yaml": true,
     "**/yarn.lock": true
-  }
+  },
+  "workbench.colorCustomizations": {
+    "activityBar.activeBackground": "#90e35b",
+    "activityBar.background": "#90e35b",
+    "activityBar.foreground": "#15202b",
+    "activityBar.inactiveForeground": "#15202b99",
+    "activityBarBadge.background": "#5c90e3",
+    "activityBarBadge.foreground": "#15202b",
+    "commandCenter.border": "#15202b99",
+    "sash.hoverBorder": "#90e35b",
+    "statusBar.background": "#73db30",
+    "statusBar.foreground": "#15202b",
+    "statusBarItem.hoverBackground": "#5cb820",
+    "statusBarItem.remoteBackground": "#73db30",
+    "statusBarItem.remoteForeground": "#15202b",
+    "titleBar.activeBackground": "#73db30",
+    "titleBar.activeForeground": "#15202b",
+    "titleBar.inactiveBackground": "#73db3099",
+    "titleBar.inactiveForeground": "#15202b99"
+  },
+  "peacock.color": "#73db30"
 }
