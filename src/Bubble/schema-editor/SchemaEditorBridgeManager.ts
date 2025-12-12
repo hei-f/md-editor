@@ -206,6 +206,11 @@ export class SchemaEditorBridgeManager {
       if (typeof this.bridge.cleanup === 'function') {
         this.bridge.cleanup();
       }
+    } catch (error) {
+      console.warn(
+        '[SchemaEditorBridge] cleanup failed during stopBridge:',
+        error,
+      );
     } finally {
       this.bridge = null;
     }
