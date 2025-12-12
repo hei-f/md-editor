@@ -16,7 +16,7 @@ import React, {
   useState,
 } from 'react';
 import { I18nContext } from '../I18n';
-import { BrowserList } from './Browser';
+import Browser from './Browser';
 import { File } from './File';
 import { RealtimeFollowList } from './RealtimeFollow';
 import { useWorkspaceStyle } from './style';
@@ -88,8 +88,9 @@ const resolveTabConfig = (
 
 const RealtimeComponent: FC<RealtimeProps> = ({ data }) =>
   data ? <RealtimeFollowList data={data} /> : null;
-const BrowserComponent: FC<BrowserProps> = ({ data }) =>
-  data ? <BrowserList data={data} /> : null;
+
+const BrowserComponent: FC<BrowserProps> = (props) => <Browser {...props} />;
+
 const TaskComponent: FC<TaskProps> = ({ data, onItemClick }) =>
   data ? <TaskList data={data} onItemClick={onItemClick} /> : null;
 const FileComponent: FC<FileProps> = (props) => <File {...props} />;
