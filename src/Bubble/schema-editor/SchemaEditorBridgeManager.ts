@@ -1,7 +1,7 @@
 import type {
   SchemaElementEditorBridge,
   SchemaValue,
-} from '@schema-element-editor/host-sdk/core';
+} from '@schema-element-editor/host-sdk';
 import { createSchemaElementEditorBridge } from '@schema-element-editor/host-sdk/core';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
